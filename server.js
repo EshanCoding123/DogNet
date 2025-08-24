@@ -580,7 +580,7 @@ app.delete('/dog/:id', requireAuth, async (req, res) => {
     if (!dog) return res.status(404).json({ error: 'Dog not found' });
     if (!req.userId || dog.ownerId?.toString() !== String(req.userId)) return res.status(403).json({ error: 'Not allowed' });
 
-    // remove dog and associated locations
+    //remove dog and associated locations
     await Dog.deleteOne({ _id: dog._id });
     await Location.deleteMany({ dogId: dog._id });
 
@@ -612,11 +612,11 @@ app.get('/user/:id', async (req, res) => {
 let _cachedGoogleMapsKey = null;
 async function loadGoogleMapsKey() {
   if (_cachedGoogleMapsKey) return _cachedGoogleMapsKey;
-  // Preferred: read from Secret Manager if a secret name is configured
+  //Preferred: read from Secret Manager if a secret name is configured
   const secretName = process.env.GOOGLE_MAPS_SECRET_NAME;
   if (secretName && secretManagerClient) {
     try {
-      // secretName should be the full resource name: projects/<project>/secrets/<name>/versions/latest
+      //secretName should be the full resource name: projects/<project>/secrets/<name>/versions/latest
       const [accessResp] = await secretManagerClient.accessSecretVersion({ name: secretName });
       const payload = accessResp.payload && accessResp.payload.data ? accessResp.payload.data.toString('utf8') : '';
       if (payload) {
@@ -627,7 +627,7 @@ async function loadGoogleMapsKey() {
       console.error('Failed to read Google Maps key from Secret Manager', err);
     }
   }
-  // Fallback to env var
+  //Fallback to env var
   _cachedGoogleMapsKey = process.env.GOOGLE_MAPS_KEY || '';
   return _cachedGoogleMapsKey;
 }
@@ -642,10 +642,10 @@ app.get('/config', async (req, res) => {
   }
 });
 
-// ---------------------
-// Start server
-// ---------------------
-const PORT = process.env.PORT || 3000;
+
+//Start server
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);
 });
+
