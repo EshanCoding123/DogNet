@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DogNet - Create account</title>
+  <link rel="manifest" href="/manifest.json">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --tap-size:48px;        /* recommended touch target */
+      --btn-padding:12px 16px;
+      --input-padding:12px;
+      --card-max:520px;
+      --radius:12px;
+      --accent:#ff9800;
+      --muted-border:#ffd8a8;
+      --bg-gradient: linear-gradient(135deg,#f7e9d7 0%,#ffe6e6 100%);
+      --font-base:16px;
+    }
+    html,body{height:100%;}
+    body { font-family: Roboto, Arial, sans-serif; background:var(--bg-gradient); margin:0; font-size:var(--font-base); -webkit-font-smoothing:antialiased; }
+    .card { max-width:var(--card-max); margin:28px auto; background:#fffbe6; padding:20px; border-radius:var(--radius); border:2px solid #ffb347; box-sizing:border-box; }
+    input, button { font-size:1rem; }
+    input[type="text"], input[type="email"], input[type="password"] {
+      padding:var(--input-padding); border-radius:8px; border:1px solid var(--muted-border); width:100%; box-sizing:border-box;
+    }
+    button{ background:var(--accent); color:#fff; border:none; padding:var(--btn-padding); border-radius:10px; cursor:pointer; min-height:var(--tap-size); display:inline-flex; align-items:center; justify-content:center; }
+    button:active{ transform:translateY(1px); }
+    .error{ color:#d32f2f; }
+
+    /* Mobile specific tweaks */
+    @media (max-width: 480px){
+      :root{ --card-max: calc(100% - 32px); --btn-padding:14px 18px; --input-padding:14px; --font-base:17px; }
+      .card{ margin:14px auto; padding:16px; }
+      .card h2{ font-size:1.25rem; }
+      label{ font-size:0.95rem; }
+      #signupResult{ font-size:0.95rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2 style="font-family:'Baloo 2',cursive; color:#ff9800;">Create account</h2>
+    <form id="signupForm">
+      <label for="username">Name</label>
+      <input id="username" name="username" type="text" required style="width:100%; padding:8px; margin-top:6px; border-radius:6px; border:1px solid #ffd8a8;" />
+      <label for="homeAddress" style="margin-top:12px; display:block;">Home address</label>
+      <input id="homeAddress" name="homeAddress" placeholder="Start typing your address..." style="width:100%; padding:8px; margin-top:6px; border-radius:6px; border:1px solid #ffd8a8;" />
+      <input id="homeLat" name="homeLat" type="hidden" />
+      <input id="homeLon" name="homeLon" type="hidden" />
+      <label for="email_signup" style="margin-top:12px; display:block;">Email</label>
+      <input id="email_signup" name="email" type="email" required style="width:100%; padding:8px; margin-top:6px; border-radius:6px; border:1px solid #ffd8a8;" />
+      <label for="password_signup" style="margin-top:12px; display:block;">Password</label>
+      <input id="password_signup" name="password" type="password" required style="width:100%; padding:8px; margin-top:6px; border-radius:6px; border:1px solid #ffd8a8;" />
+      <div style="margin-top:16px;"><button type="submit">Sign up</button></div>
+      <div id="signupResult" style="margin-top:12px"></div>
+    </form>
+    <div style="margin-top:12px; font-size:0.95rem">Already have an account? <a href="/login.html">Log in</a></div>
+  </div>
+  <!-- Load Google Maps Places API (replace YOUR_GOOGLE_MAPS_API_KEY with your key and restrict it in Google Cloud Console) -->
+  <script>
+  // Dynamically load Google Maps using a key from /config
+    (function loadMaps(){
+      fetch('/config').then(r => r.json()).then(cfg => {
+        const key = cfg && cfg.googleMapsKey;
+        if (!key) return console.error('Google Maps key not configured. Set GOOGLE_MAPS_KEY in your environment.');
+        const s = document.createElement('script');
+        s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&callback=initRegistrationAutocomplete`;
+        s.async = true; s.defer = true;
+        document.head.appendChild(s);
+      }).catch(err => console.error('Failed to load config for Google Maps', err));
+    })();
+  </script>
+
+  <script>
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(e => console.warn('SW register failed', e));
+    }
+  </script>
+
+  <script>
+  // Initialize Places Autocomplete for the home address input and populate hidden lat/lon
+  function initRegistrationAutocomplete() {
+    const input = document.getElementById('homeAddress');
+    if (!input || !(window.google && google.maps && google.maps.places)) return;
+    const autocomplete = new google.maps.places.Autocomplete(input, { types: ['geocode'] });
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      if (!place || !place.geometry) return;
+      const lat = place.geometry.location.lat();
+      const lon = place.geometry.location.lng();
+      const latEl = document.getElementById('homeLat');
+      const lonEl = document.getElementById('homeLon');
+      if (latEl) latEl.value = lat;
+      if (lonEl) lonEl.value = lon;
+    });
+  }
+
+  // Try to initialize when maps lib is ready. If not ready yet, poll briefly.
+  (function waitForMaps(){
+    if (window.google && google.maps && google.maps.places) { initRegistrationAutocomplete(); return; }
+    let attempts = 0;
+    const id = setInterval(() => {
+      attempts++;
+      if (window.google && google.maps && google.maps.places) { clearInterval(id); initRegistrationAutocomplete(); }
+      if (attempts > 50) clearInterval(id);
+    }, 200);
+  })();
+
+  // basic registration: call /signup then store id and redirect to dashboard (index /)
+    document.getElementById('signupForm').onsubmit = async function(e){
+      e.preventDefault();
+      const form = e.target;
+      if (!form.homeLat.value || !form.homeLon.value) { document.getElementById('signupResult').innerHTML = '<div class="error">Please pick an address from suggestions</div>'; return; }
+      const data = { username: form.username.value, email: form.email_signup.value, password: form.password_signup.value, homeLat: parseFloat(form.homeLat.value), homeLon: parseFloat(form.homeLon.value) };
+      try {
+        const res = await fetch('/signup', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(data) });
+        const j = await res.json();
+        if (j && j.success) {
+          localStorage.setItem('currentUserId', j.userId);
+          if (j.token) localStorage.setItem('authToken', j.token);
+          window.location.href = '/';
+        }
+        else document.getElementById('signupResult').innerHTML = '<div class="error">' + (j.error || 'Sign up failed') + '</div>';
+      } catch (err) { console.error('signup failed', err); document.getElementById('signupResult').innerHTML = '<div class="error">Network error</div>'; }
+    };
+  </script>
+</body>
+</html>
