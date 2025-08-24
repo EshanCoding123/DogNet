@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DogNet - Login</title>
+  <link rel="manifest" href="/manifest.json">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root{ --tap-size:48px; --btn-padding:12px 16px; --input-padding:12px; --card-max:420px; --radius:12px; --accent:#ff9800; --muted-border:#ffd8a8; --bg-gradient: linear-gradient(135deg,#f7e9d7 0%,#ffe6e6 100%); }
+    html,body{height:100%;}
+    body { font-family: Roboto, Arial, sans-serif; background:var(--bg-gradient); margin:0; -webkit-font-smoothing:antialiased; }
+    .card { max-width:var(--card-max); margin:28px auto; background:#fffbe6; padding:20px; border-radius:var(--radius); border:2px solid #ffb347; box-sizing:border-box; }
+    input, button { font-size:1rem; }
+    input[type="email"], input[type="password"] { padding:var(--input-padding); border-radius:8px; border:1px solid var(--muted-border); width:100%; box-sizing:border-box; }
+    button{ background:var(--accent); color:#fff; border:none; padding:var(--btn-padding); border-radius:10px; cursor:pointer; min-height:var(--tap-size); display:inline-flex; align-items:center; justify-content:center; }
+    a { color:#ff6b6b; }
+
+    @media (max-width:480px){
+      :root{ --card-max: calc(100% - 32px); --btn-padding:14px 18px; --input-padding:14px; }
+      .card{ margin:14px auto; padding:16px; }
+      .card h2{ font-size:1.25rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2 style="font-family:'Baloo 2',cursive; color:#ff9800;">Welcome back</h2>
+    <form id="loginForm">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" required style="width:100%; padding:8px; margin-top:6px; border-radius:6px; border:1px solid #ffd8a8;" />
+      <label for="password" style="margin-top:12px; display:block;">Password</label>
+      <input id="password" name="password" type="password" required style="width:100%; padding:8px; margin-top:6px; border-radius:6px; border:1px solid #ffd8a8;" />
+      <div style="margin-top:16px;"><button type="submit">Log in</button></div>
+      <div id="loginResult" style="margin-top:12px"></div>
+    </form>
+    <div style="margin-top:12px; font-size:0.95rem">Don't have an account? <a href="/registration.html">Create one</a></div>
+  </div>
+
+  <script>
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(e => console.warn('SW register failed', e));
+    }
+    document.getElementById('loginForm').onsubmit = async function(e){
+      e.preventDefault();
+      const form = e.target;
+      const data = { email: form.email.value, password: form.password.value };
+      try{
+        const res = await fetch('/login', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(data) });
+        const j = await res.json();
+        if (j && j.success) {
+          localStorage.setItem('currentUserId', j.userId);
+          if (j.token) localStorage.setItem('authToken', j.token);
+          window.location.href = '/';
+        } else {
+          const el = document.getElementById('loginResult'); if (el) el.innerHTML = '<div class="error">' + (j.error || 'Login failed') + '</div>';
+        }
+      }catch(err){ console.error('login failed', err); const el = document.getElementById('loginResult'); if (el) el.innerHTML = '<div class="error">Network error</div>'; }
+    };
+  </script>
+</body>
+</html>
