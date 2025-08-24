@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>DogNet - Sign Up & Register Dog</title>
+  <link rel="manifest" href="/manifest.json">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --accent: #ff9800;
+      --card-radius: 16px;
+      --tap:48px;
+      --input-pad:12px;
+      --container-max:420px;
+    }
+    html,body{height:100%;}
+    body {
+      font-family: 'Roboto', Arial, sans-serif;
+      background: linear-gradient(135deg, #f7e9d7 0%, #ffe6e6 100%);
+      margin: 0;
+      min-height: 100vh;
+      -webkit-font-smoothing:antialiased;
+      font-size:16px;
+    }
+    .dog-header {
+      text-align: center;
+      padding: 20px 12px;
+      background: linear-gradient(90deg, #ffb347 0%, #ffcc80 100%);
+      color: #4e260e;
+      font-family: 'Baloo 2', cursive;
+      font-size: 1.6rem;
+      letter-spacing: 1px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      position: relative;
+    }
+    .dog-header .dog-emoji { font-size: 2rem; margin-right: 8px; }
+    .container {
+      max-width: var(--container-max);
+      margin: 20px auto;
+      background: #fffbe6;
+      padding: 18px;
+      border-radius: var(--card-radius);
+      box-shadow: 0 4px 24px rgba(255, 179, 71, 0.13);
+      border: 2px solid #ffb347;
+      position: relative;
+      box-sizing: border-box;
+    }
+    h2 { text-align:center; margin-bottom:12px; font-family: 'Baloo 2', cursive; color:var(--accent); font-size:1.25rem; }
+    label { display:block; margin-top:12px; color:#4e260e; font-weight:500; }
+    input, select, button { font-size:1rem; }
+    input, select { width:100%; padding:var(--input-pad); margin-top:6px; border-radius:10px; border:1.5px solid #ffb347; box-sizing:border-box; }
+    input:focus{ outline:none; border-color:var(--accent); }
+    button { margin-top:18px; width:100%; padding:12px; background: linear-gradient(90deg, var(--accent) 0%, #ffb347 100%); color:#fff; border:none; border-radius:10px; cursor:pointer; min-height:var(--tap); display:inline-flex; align-items:center; justify-content:center; }
+    .small-btn { padding:8px 10px; border-radius:8px; min-height:40px; }
+    .success{ color:#388e3c; }
+    .error{ color:#d32f2f; }
+    #mapContainer { margin-top:18px; border-radius:14px; box-shadow: 0 4px 24px rgba(255, 179, 71, 0.13); border:2px solid #ffb347; background:#fffbe6; max-width:900px; margin-left:auto; margin-right:auto; padding-bottom:12px; }
+    #map{ border-radius:12px; border:1.5px solid #ffb347; width:100%; height:360px; }
+    .page-transition{ transition: opacity 260ms ease, transform 260ms ease; }
+    .hidden-by-transition{ opacity:0; transform:translateY(8px); pointer-events:none; }
+    .visible-by-transition{ opacity:1; transform:translateY(0); }
+    .paw{ position:absolute; top:-14px; right:14px; font-size:1.6rem; color:var(--accent); opacity:0.85; }
+    #mapContainer{ display:none !important; visibility:hidden !important; }
+    body.app-ready #mapContainer{ display:block !important; visibility:visible !important; }
+
+    /* Responsive tweaks for small phones */
+    @media (max-width:480px){
+      :root{ --container-max: calc(100% - 28px); }
+      .dog-header{ padding:16px 8px; font-size:1.2rem; }
+      .container{ margin:12px auto; padding:12px; }
+      #map{ height:300px; }
+      button{ font-size:1rem; min-height:48px; }
+      input{ padding:14px; }
+      #findNearbyBtn{ padding:12px 14px; border-radius:10px; min-height:48px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="dog-header"><span class="dog-emoji">🐶</span>DogNet - Track Your Best Friend!<span class="paw">🐾</span></div>
+
+  <!-- Splash: Get started for unauthenticated users -->
+  <div id="splashAuth" style="max-width:900px; margin:18px auto; display:flex; justify-content:center; gap:12px;">
+    <div style="background:#fffbe6; padding:22px; border-radius:12px; border:2px solid #ffb347; display:flex; align-items:center; gap:12px;">
+      <div style="font-size:1.05rem; font-weight:700; color:#4e260e;">Welcome to DogNet</div>
+      <button id="getStartedBtn" style="background:#ff9800; color:#fff; border:none; padding:10px 14px; border-radius:8px; cursor:pointer;">Get started</button>
+    </div>
+  </div>
+
+  <div class="container" id="registerDogContainer" style="display:none">
+    <h2>Register your dog</h2>
+  <div style="padding:8px; margin-bottom:12px; border-radius:8px; background:#fff3e0; color:#6a3a00; font-weight:600;">Never share your device ID with anyone.</div>
+   
+  <form id="registerDogForm">
+      <label for="deviceId">Device ID (This is located on the device)</label>
+      <input id="deviceId" name="deviceId" type="text" />
+      <label for="name">Dog name</label>
+      <input id="name" name="name" type="text" />
+      <label for="age">Age</label>
+      <input id="age" name="age" type="number" />
+      <label for="breed">Breed</label>
+      <input id="breed" name="breed" type="text" />
+      <label for="traits">Traits (comma separated)</label>
+      <input id="traits" name="traits" type="text" />
+      <label for="photoFile">Photo</label>
+      <input id="photoFile" name="photoFile" type="file" accept="image/*" />
+  <label for="sharePublic" style="margin-top:12px; display:block;">Share dog publicly</label>
+  <input id="sharePublic" name="sharePublic" type="checkbox" />
+      <label for="password_dog">Re-enter account password</label>
+      <input id="password_dog" name="password" type="password" />
+  <button type="submit">Register Dog</button>
+  <button type="button" id="exitRegisterBtn" class="small-btn">Exit</button>
+      <div id="registerDogResult"></div>
+    </form>
+  </div>
+
+  <div class="container" id="dogLoginContainer" style="display:none">
+    <h2>Dog login (device)</h2>
+    <form id="dogLoginForm">
+      <label for="dogPassword">Dog password</label>
+      <input id="dogPassword" name="password" type="password" />
+      <button type="submit">Continue</button>
+      <div id="dogLoginResult"></div>
+    </form>
+  </div>
+
+  <div id="mapContainer" style="display:none">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px;">
+      <div><strong>Your pets</strong></div>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+          <div style="font-size:0.95rem; color:#666; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Click a pet to center on the map</div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button id="addDogBtn" type="button" class="small-btn" style="padding:8px 12px; border-radius:6px; background:#ffb347; border:none; cursor:pointer">+ Add dog</button>
+          <button id="logoutBtn" type="button" style="padding:8px 12px; border-radius:6px; background:#ff6b6b; border:none; color:#fff; cursor:pointer">Log out</button>
+        </div>
+      </div>
+    </div>
+  <div id="petListContainer" style="max-width:900px; margin:0 auto 8px auto; background:#fff; border-radius:8px;
+        border:1px solid #f0f0f0; box-shadow:0 1px 4px rgba(0,0,0,0.04);"></div>
+  <div id="dogInfoContainer" style="max-width:900px; margin:8px auto; background:#ffffff; border-radius:8px; border:1px solid #f0f0f0; padding:12px; display:none;"></div>
+    <div style="padding:16px; text-align:center;"><strong>Your map</strong></div>
+    <div style="padding:16px; text-align:center;"><strong>If your pet does not appear, please turn on your GPS collar's roaming and make sure it is sending coordinates to the server. Then, click your pet name to center on its location!</strong></div>
+    <div id="map" style="height:480px; width:100%;"></div>
+  </div>
+  <!-- Nearby feature: Find public dogs near your phone -->
+  <div style="max-width:900px; margin:12px auto; text-align:center;">
+    <button id="findNearbyBtn" style="padding:8px 12px; border-radius:8px; background:#4caf50; color:#fff; border:none; cursor:pointer;">Find nearby dogs</button>
+    <div id="nearbyResult" style="margin-top:12px;"></div>
+  </div>
+  <script>
+  // Register service worker for basic PWA support
+  if ('serviceWorker' in navigator) {
+    try { navigator.serviceWorker.register('/sw.js'); } catch (e) { console.warn('SW registration failed', e); }
+  }
+  // Load Google Maps script dynamically using key fetched from /config
+  (function loadMaps(){
+    fetch('/config').then(r => r.json()).then(cfg => {
+      const key = cfg && cfg.googleMapsKey;
+      if (!key) {
+        console.error('Google Maps key not configured. Set GOOGLE_MAPS_KEY in your environment.');
+        return;
+      }
+      const s = document.createElement('script');
+      // call initMap when the Maps library is ready (initMap is defined in app.js)
+      s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&callback=initMap`;
+      s.async = true; s.defer = true;
+      document.head.appendChild(s);
+    }).catch(err => console.error('Failed to load config for Google Maps', err));
+  })();
+
+  // consolidated client script: autocomplete, login/signup, register dog, map
+  let autocomplete;
+  // map/markers made global so functions defined outside DOMContentLoaded can access them
+  var map;
+  var markers = [];
+  var profileCache = {};
+  // global transition helpers used by functions outside DOMContentLoaded (renderPetList, app.js, etc.)
+  if (typeof window !== 'undefined') {
+    window.showElement = window.showElement || function(el) {
+      if (!el) return;
+      el.classList.add('page-transition');
+      el.classList.remove('hidden-by-transition');
+      el.classList.add('visible-by-transition');
+      el.style.display = '';
+      setTimeout(() => { el.style.pointerEvents = ''; }, 300);
+    };
+    window.hideElement = window.hideElement || function(el) {
+      if (!el) return;
+      el.classList.add('page-transition');
+      el.classList.remove('visible-by-transition');
+      el.classList.add('hidden-by-transition');
+      setTimeout(() => { el.style.display = 'none'; }, 300);
+    };
+  }
+    function initAutocomplete() {
+      const el = document.getElementById('homeAddress');
+      if (!el || !google || !google.maps || !google.maps.places) return;
+      autocomplete = new google.maps.places.Autocomplete(el, { types: ['geocode'] });
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (place && place.geometry && place.geometry.location) {
+          document.getElementById('homeLat').value = place.geometry.location.lat();
+          document.getElementById('homeLon').value = place.geometry.location.lng();
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.google && google.maps && google.maps.places) initAutocomplete();
+      // initial UI state (hide optional sections until needed)
+  const lc = document.getElementById('loginContainer');
+  const sc = document.getElementById('signupContainer');
+  const rd = document.getElementById('registerDogContainer');
+  const dl = document.getElementById('dogLoginContainer');
+  const mc = document.getElementById('mapContainer');
+  // initial UI: show login only
+  // apply transition classes and initial visibility
+  function showElement(el) {
+    if (!el) return;
+    el.classList.add('page-transition');
+    el.classList.remove('hidden-by-transition');
+    el.classList.add('visible-by-transition');
+    el.style.display = '';
+    // clear pointer-events block after animation
+    setTimeout(() => { el.style.pointerEvents = ''; }, 300);
+  }
+  function hideElement(el) {
+    if (!el) return;
+    el.classList.add('page-transition');
+    el.classList.remove('visible-by-transition');
+    el.classList.add('hidden-by-transition');
+    // after transition, set display none so layout collapses
+    setTimeout(() => { el.style.display = 'none'; }, 300);
+  }
+
+  if (lc) showElement(lc); else if (lc) lc.style.display = '';
+  if (sc) hideElement(sc);
+  if (rd) hideElement(rd);
+  if (dl) hideElement(dl);
+  if (mc) hideElement(mc);
+
+  // restore session from localStorage (login.html / registration.html store currentUserId and authToken there)
+    try {
+      if (localStorage && localStorage.getItem) {
+        window.currentUserId = localStorage.getItem('currentUserId') || null;
+        window.authToken = localStorage.getItem('authToken') || null;
+        const regForm = document.getElementById('registerDogForm'); if (regForm && window.currentUserId) regForm.dataset.userId = window.currentUserId;
+      }
+    } catch (e) { window.currentUserId = null; window.authToken = null; }
+
+    // ensure UI reflects current auth state right away
+    try { updateAuthUI(); } catch(e) {}
+
+  // update UI elements based on authentication state
+  function updateAuthUI() {
+    try {
+      const addBtn = document.getElementById('addDogBtn');
+      if (addBtn) {
+        if (window.currentUserId && window.authToken) { addBtn.style.display = ''; addBtn.disabled = false; }
+        else { addBtn.style.display = 'none'; addBtn.disabled = true; }
+      }
+      const regForm = document.getElementById('registerDogContainer');
+      if (regForm && !window.currentUserId) {
+        // ensure the register form cannot be displayed for unauthenticated users
+        try { regForm.style.display = 'none'; } catch(e){}
+      }
+    } catch (e) { /* ignore UI update errors */ }
+  }
+
+  // Manage splash/auth flow:
+  try {
+    const splash = document.getElementById('splashAuth');
+    const getStarted = document.getElementById('getStartedBtn');
+    if (getStarted) {
+      getStarted.onclick = () => {
+        // redirect user to login page where they can choose to log in or create an account
+        window.location.href = '/login.html';
+      };
+    }
+
+    // Only auto-show the dashboard if a session exists (we expect login/registration pages to set localStorage.currentUserId then redirect back here).
+    if (window.currentUserId) {
+      // hide splash
+      if (splash) splash.style.display = 'none';
+      console.debug('signup: session found, auto-opening dashboard for', window.currentUserId);
+      // give other scripts (and Google Maps) a moment, then show map
+      setTimeout(() => {
+        try {
+      if (typeof showMap === 'function') { showMap(); }
+          else {
+            if (window && window.showElement) {
+              const mc = document.getElementById('mapContainer'); if (mc) window.showElement(mc);
+            }
+            try { initMap(); } catch (e) { /* ignore init errors (maps may still load) */ }
+          }
+          // ensure the container is visible as a last resort
+          const mc2 = document.getElementById('mapContainer'); if (mc2) { mc2.style.display = ''; }
+        } catch (e) { console.warn('signup: showMap failed', e); }
+      }, 120);
+    } else {
+      // ensure map is hidden and splash visible
+      if (splash) splash.style.display = '';
+    const mc = document.getElementById('mapContainer'); if (mc) mc.style.display = 'none';
+    try { document.body.classList.remove('app-ready'); } catch(e){}
+    }
+  } catch (e) { /* ignore */ }
+
+    // small helper to show map and initialize
+    function showMap() {
+  const lc = document.getElementById('loginContainer'); if (lc) hideElement(lc);
+  const sc = document.getElementById('signupContainer'); if (sc) hideElement(sc);
+  const rd = document.getElementById('registerDogContainer'); if (rd) hideElement(rd);
+  const dl = document.getElementById('dogLoginContainer'); if (dl) hideElement(dl);
+  // mark app as ready so CSS reveals protected UI without a flash
+  try { document.body.classList.add('app-ready'); } catch(e){}
+  const mc = document.getElementById('mapContainer'); if (mc) showElement(mc);
+  initMap();
+    }
+
+    // Login
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+      loginForm.onsubmit = async function (e) {
+        e.preventDefault();
+        const form = e.target;
+  const data = { email: form.email.value, password: form.password.value };
+        try {
+          const res = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+          const result = await res.json();
+            if (result.success) {
+            window.currentUserId = result.userId;
+            window.authToken = result.token || null;
+            const regForm = document.getElementById('registerDogForm'); if (regForm) regForm.dataset.userId = result.userId;
+            try { localStorage.setItem('currentUserId', result.userId); if (result.token) localStorage.setItem('authToken', result.token); } catch(e) {}
+            // ensure UI updates for authenticated user
+            try { updateAuthUI(); } catch(e) {}
+            // go to map (animate)
+            showMap();
+          } else if (result.error === 'User not found') {
+            const lr = document.getElementById('loginResult'); if (lr) lr.innerHTML = '<div class="error">User not found. Please sign up below.</div>';
+            const lc = document.getElementById('loginContainer'); if (lc) lc.style.display = 'none';
+            const sc = document.getElementById('signupContainer'); if (sc) sc.style.display = '';
+            const sf = document.getElementById('signupForm'); if (sf) { const es = document.getElementById('email_signup'); const ps = document.getElementById('password_signup'); if (es) es.value = form.email.value; if (ps) ps.value = form.password.value; }
+          } else {
+            const lr = document.getElementById('loginResult'); if (lr) lr.innerHTML = '<div class="error">' + (result.error || 'Login failed') + '</div>';
+          }
+        } catch (err) {
+          const lr = document.getElementById('loginResult'); if (lr) lr.innerHTML = '<div class="error">Network error</div>';
+        }
+      };
+    }
+
+    // Signup
+    const signupForm = document.getElementById('signupForm');
+    if (signupForm) {
+      signupForm.onsubmit = async function (e) {
+        e.preventDefault();
+        const form = e.target;
+        if (!form.homeLat.value || !form.homeLon.value) {
+          const sr = document.getElementById('signupResult'); if (sr) sr.innerHTML = '<div class="error">Please select a valid address from the dropdown.</div>';
+          return;
+        }
+  const data = { username: form.username.value, email: document.getElementById('email_signup') ? document.getElementById('email_signup').value : form.email.value, password: document.getElementById('password_signup') ? document.getElementById('password_signup').value : form.password.value, homeLat: parseFloat(form.homeLat.value), homeLon: parseFloat(form.homeLon.value) };
+        try {
+          const res = await fetch('/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+          const result = await res.json();
+            if (result.success) {
+            window.currentUserId = result.userId;
+            window.authToken = result.token || null;
+            const regForm = document.getElementById('registerDogForm'); if (regForm) regForm.dataset.userId = result.userId;
+            try { localStorage.setItem('currentUserId', result.userId); if (result.token) localStorage.setItem('authToken', result.token); } catch(e) {}
+            try { updateAuthUI(); } catch(e) {}
+            // show register dog with animation
+            const sc = document.getElementById('signupContainer'); if (sc) hideElement(sc);
+            const rd = document.getElementById('registerDogContainer'); if (rd) showElement(rd);
+          } else {
+            const sr = document.getElementById('signupResult'); if (sr) sr.innerHTML = '<div class="error">' + (result.error || 'Sign up failed') + '</div>';
+          }
+        } catch (err) {
+          const sr = document.getElementById('signupResult'); if (sr) sr.innerHTML = '<div class="error">Network error</div>';
+        }
+      };
+    }
+
+    // Register dog
+    const registerDogForm = document.getElementById('registerDogForm');
+    if (registerDogForm) {
+      registerDogForm.onsubmit = async function (e) {
+        e.preventDefault();
+        const form = e.target;
+
+        const rr = document.getElementById('registerDogResult');
+        // Block unauthenticated users immediately to avoid unnecessary photo uploads
+        if (!window.currentUserId || !window.authToken) {
+          if (rr) rr.innerHTML = '<div class="error">Please log in before registering a dog. <a href="/login.html">Go to login</a></div>';
+          return;
+        }
+
+        // handle photo upload if provided
+        let photoUrl = '';
+        const photoFile = form.photoFile && form.photoFile.files && form.photoFile.files[0];
+        if (photoFile) {
+          const fd = new FormData(); fd.append('photo', photoFile);
+          try {
+            const up = await fetch('/upload-dog-photo', { method: 'POST', body: fd, headers: { ...(window.authToken ? { 'Authorization': 'Bearer ' + window.authToken } : {}) } });
+            const upj = await up.json();
+            if (upj.url) photoUrl = upj.url; else { if (rr) rr.innerHTML = '<div class="error">Photo upload failed</div>'; return; }
+          } catch (err) { if (rr) rr.innerHTML = '<div class="error">Photo upload failed</div>'; return; }
+        }
+
+        const deviceId = (form.deviceId && form.deviceId.value) ? form.deviceId.value.trim() : '';
+        if (!deviceId) { if (rr) rr.innerHTML = '<div class="error">Please enter your dog\'s Device ID.</div>'; return; }
+
+        // Check if form is in edit mode
+        const editingId = registerDogForm.dataset.editDogId;
+        const authHdr = { ...(window.authToken ? { 'Authorization': 'Bearer ' + window.authToken } : {}) };
+        if (editingId) {
+          // update flow
+          if (!window.currentUserId) { if (rr) rr.innerHTML = '<div class="error">Authentication required to update dog.</div>'; return; }
+          const payload = { deviceId, name: form.name.value, age: parseInt(form.age.value), breed: form.breed.value, traits: form.traits.value.split(',').map(t=>t.trim()), photoUrl, sharePublic: !!form.sharePublic && !!form.sharePublic.checked };
+          try {
+            const res = await fetch(`/dog/${editingId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', ...authHdr }, body: JSON.stringify(payload) });
+            const result = await res.json();
+            if (result.success) {
+              if (rr) rr.innerHTML = '<div class="success">Dog updated!</div>';
+              // clear edit mode
+              delete registerDogForm.dataset.editDogId;
+              showMap();
+            } else { if (rr) rr.innerHTML = '<div class="error">' + (result.error || 'Update failed') + '</div>'; }
+          } catch (err) { if (rr) rr.innerHTML = '<div class="error">Network error</div>'; }
+        } else {
+          // create flow
+          const payload = { deviceId, password: form.password.value, name: form.name.value, age: parseInt(form.age.value), breed: form.breed.value, traits: form.traits.value.split(',').map(t => t.trim()), photoUrl, sharePublic: !!form.sharePublic && !!form.sharePublic.checked };
+          try {
+            const res = await fetch('/registerDog', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHdr }, body: JSON.stringify(payload) });
+            const result = await res.json();
+            if (result.success) {
+              if (rr) rr.innerHTML = '<div class="success">Dog registered!</div>';
+              showMap();
+            } else { if (rr) rr.innerHTML = '<div class="error">' + (result.error || 'Dog registration failed') + '</div>'; }
+          } catch (err) { if (rr) rr.innerHTML = '<div class="error">Network error</div>'; }
+        }
+      };
+    }
+
+    // Dog login (device owner)
+    const dogLoginForm = document.getElementById('dogLoginForm');
+    if (dogLoginForm) {
+      dogLoginForm.onsubmit = async function (e) {
+        e.preventDefault();
+        const form = e.target;
+        const regDog = document.getElementById('registerDogForm');
+        const deviceId = form.dataset.deviceId || (regDog && regDog.deviceId && regDog.deviceId.value) || '';
+        const password = form.password.value;
+        try {
+          const res = await fetch('/dog-login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId, password }) });
+          const result = await res.json();
+          if (result.success) { showMap(); }
+          else { const dr = document.getElementById('dogLoginResult'); if (dr) dr.innerHTML = '<div class="error">' + (result.error || 'Dog login failed') + '</div>'; }
+        } catch (err) { const dr = document.getElementById('dogLoginResult'); if (dr) dr.innerHTML = '<div class="error">Network error</div>'; }
+      };
+    }
+
+    // wire Add Dog button
+    const addDogBtn = document.getElementById('addDogBtn');
+    if (addDogBtn) {
+      addDogBtn.onclick = () => {
+        // if not logged in, redirect to login to avoid showing mutation UI
+        if (!window.currentUserId) {
+          window.location.href = '/login.html';
+          return;
+        }
+        const f = document.getElementById('registerDogForm');
+        if (!f) return;
+        // clear fields
+        f.deviceId.value = '';
+        f.name.value = '';
+        f.age.value = '';
+        f.breed.value = '';
+        f.traits.value = '';
+        f.password.value = '';
+        delete f.dataset.editDogId;
+        // show the form with transitions
+        const lc = document.getElementById('loginContainer'); if (lc) hideElement(lc);
+        const sc = document.getElementById('signupContainer'); if (sc) hideElement(sc);
+        const rc = document.getElementById('registerDogContainer'); if (rc) showElement(rc);
+      };
+    }
+
+    // wire Exit button on register form
+    const exitRegisterBtn = document.getElementById('exitRegisterBtn');
+    if (exitRegisterBtn) {
+      exitRegisterBtn.onclick = () => {
+        const rc = document.getElementById('registerDogContainer'); if (rc) hideElement(rc);
+        const mc = document.getElementById('mapContainer'); if (mc) showElement(mc);
+      };
+    }
+
+    // wire Logout button (clears local session & UI)
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.onclick = () => {
+  // clear client-side session (localStorage + in-memory) and redirect to login page
+  try { localStorage.removeItem('currentUserId'); } catch (e) { /* ignore */ }
+  try { localStorage.removeItem('authToken'); } catch (e) { /* ignore */ }
+  window.currentUserId = null; window.authToken = null;
+  try { document.body.classList.remove('app-ready'); } catch(e){}
+  // go to login page to ensure a clean auth state
+  window.location.href = '/login.html';
+      };
+    }
+
+    // Nearby: request phone location and query /nearby
+    const findNearbyBtn = document.getElementById('findNearbyBtn');
+    if (findNearbyBtn) {
+      findNearbyBtn.onclick = async () => {
+        const nr = document.getElementById('nearbyResult'); if (nr) nr.innerHTML = 'Locating…';
+        if (!navigator.geolocation) { if (nr) nr.innerHTML = '<div class="error">Geolocation not available</div>'; return; }
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+          const lat = pos.coords.latitude; const lon = pos.coords.longitude;
+          if (nr) nr.innerHTML = 'Searching nearby public dogs…';
+          try {
+            const res = await fetch('/nearby', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lat, lon, radiusMeters: 5000 }) });
+            const j = await res.json();
+            if (!j || !j.success) { if (nr) nr.innerHTML = '<div class="error">No results</div>'; return; }
+            const arr = j.results || [];
+            if (!arr.length) { if (nr) nr.innerHTML = '<div style="padding:8px">No public dogs found nearby.</div>'; return; }
+            // Render list
+            let html = '<ul style="list-style:none; padding:8px; margin:0; text-align:left;">';
+            for (const d of arr) {
+              // prefer top-level fields, then profile.* if returned by server
+              const name = d.name || (d.profile && d.profile.name) || 'Unnamed';
+              const breed = d.breed || (d.profile && d.profile.breed) || '';
+              const age = d.age || (d.profile && d.profile.age) || '';
+              const traits = (d.traits && d.traits.length) ? d.traits : ((d.profile && d.profile.traits) || []);
+              html += `<li style="padding:8px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;"><div><strong>${name}</strong> <span style="color:#666; font-size:0.9rem">${d.distanceMeters}m</span><div style="font-size:0.9rem">${breed} · ${age} · ${traits.join(', ')}</div></div><div><button data-lat='${d.lat}' data-lon='${d.lon}' class='centerNearbyBtn' style='padding:6px 8px; border-radius:6px; background:#ff9800; color:#fff; border:none; cursor:pointer'>Center</button></div></li>`;
+            }
+            html += '</ul>';
+            if (nr) nr.innerHTML = html;
+            // add markers for nearby results
+            // clear previous nearby markers (we'll reuse 'nearbyMarkers' array)
+            window.nearbyMarkers = window.nearbyMarkers || [];
+            (window.nearbyMarkers||[]).forEach(m=>m.setMap(null)); window.nearbyMarkers = [];
+            for (const d of arr) {
+              if (!map) continue;
+              const name = d.name || (d.profile && d.profile.name) || 'Dog';
+              const photo = d.photoUrl || (d.profile && d.profile.photoUrl) || 'https://cdn-icons-png.flaticon.com/512/616/616408.png';
+              const breed = d.breed || (d.profile && d.profile.breed) || '';
+              const traits = (d.traits && d.traits.length) ? d.traits : ((d.profile && d.profile.traits) || []);
+              const m = new google.maps.Marker({ position: { lat: Number(d.lat), lng: Number(d.lon) }, map, title: name, icon: { url: photo, scaledSize: new google.maps.Size(48,48) } });
+              const iw = new google.maps.InfoWindow({ content: `<b>${name}</b><br>${breed}<br>${traits.join(', ')}` });
+              m.addListener('click', ()=> iw.open(map,m));
+              window.nearbyMarkers.push(m);
+            }
+            // wire center buttons
+            Array.from(document.getElementsByClassName('centerNearbyBtn')).forEach(btn => btn.onclick = (ev) => { const lat = Number(btn.getAttribute('data-lat')); const lon = Number(btn.getAttribute('data-lon')); if (map) { map.setCenter({ lat, lng: lon }); map.setZoom(15); } });
+          } catch (err) { console.error('nearby failed', err); if (nr) nr.innerHTML = '<div class="error">Nearby search failed</div>'; }
+        }, (err) => { const nr = document.getElementById('nearbyResult'); if (nr) nr.innerHTML = '<div class="error">Location permission denied or unavailable</div>'; });
+      };
+    }
+
+  async function loadDogs() {
+      try {
+  const res = await fetch('/locations', { headers: { ...(window.authToken ? { 'Authorization': 'Bearer ' + window.authToken } : {}) } });
+        const dogs = await res.json();
+        console.debug('app.js: fetched /locations ->', dogs);
+        if (!map) { console.warn('app.js: map not initialized yet'); return; }
+        markers.forEach(m => m.setMap(null)); markers = [];
+
+        // filter to current user's dogs if logged in
+        const filtered = window.currentUserId ? dogs.filter(d => (d.profile && d.profile.ownerId) === String(window.currentUserId)) : dogs;
+        // render the pet dashboard
+        try { renderPetList(filtered); } catch (e) { console.warn('renderPetList failed', e); }
+
+        for (const d of filtered) {
+          const lat = d.lat === undefined || d.lat === null ? null : Number(d.lat);
+          const lon = d.lon === undefined || d.lon === null ? null : Number(d.lon);
+          if (lat === null || lon === null || Number.isNaN(lat) || Number.isNaN(lon)) continue;
+          let profile = d.profile;
+          if ((!profile || !profile.name) && d.dogId) {
+            if (profileCache[d.dogId]) profile = profileCache[d.dogId];
+            else {
+              try { const pRes = await fetch(`/dog/${d.dogId}`); const pj = await pRes.json(); if (pj.success) { profile = pj.profile; profileCache[d.dogId] = profile; } } catch (err) { console.warn('failed to fetch profile', d.dogId, err); }
+            }
+          }
+          const title = (profile && profile.name) || d.deviceId || 'Dog';
+          const iconUrl = (profile && profile.photoUrl) || 'https://cdn-icons-png.flaticon.com/512/616/616408.png';
+          const marker = new google.maps.Marker({ position: { lat, lng: lon }, map, title, icon: { url: iconUrl, scaledSize: new google.maps.Size(64,64) } });
+          const info = new google.maps.InfoWindow({ content: `<b>${title}</b><br>Age: ${(profile && profile.age) || 'N/A'}<br>Breed: ${(profile && profile.breed) || 'N/A'}<br>Traits: ${((profile && profile.traits) || []).join(', ')}` });
+          marker.addListener('click', () => info.open(map, marker));
+          // tag marker with dogId so the pet list can find it
+          marker.__dogId = d.dogId;
+          markers.push(marker);
+          console.debug('app.js: created marker', { title, lat, lon, dogId: d.dogId });
+        }
+      } catch (err) { console.error('loadDogs error', err); }
+    }
+
+    function initMap() {
+      map = new google.maps.Map(document.getElementById('map'), { center: { lat: 40.758, lng: -73.985 }, zoom: 14 });
+      // center on user's home if available
+      (async () => {
+        try {
+          if (window.currentUserId) {
+            const ur = await fetch(`/user/${window.currentUserId}`); const uj = await ur.json(); if (uj.success && uj.user && uj.user.homeLocation) { const h = uj.user.homeLocation; if (h && (h.lat || h.lat === 0) && (h.lon || h.lon === 0)) map.setCenter({ lat: Number(h.lat), lng: Number(h.lon) }); }
+          }
+        } catch (err) { console.warn('center on home failed', err); }
+      })();
+      loadDogs(); setInterval(loadDogs, 5000);
+      }
+      });
+
+    function renderPetList(dogs) {
+      const container = document.getElementById('petListContainer');
+      if (!container) return;
+      container.innerHTML = '';
+      if (!dogs || !dogs.length) { container.innerHTML = '<div style="padding:8px">No pets registered yet. Register one to see it on the map.</div>'; return; }
+
+      const ul = document.createElement('ul'); ul.style.listStyle = 'none'; ul.style.padding = '8px'; ul.style.margin = '0';
+      dogs.forEach(d => {
+        const li = document.createElement('li');
+        li.style.display = 'flex';
+        li.style.justifyContent = 'space-between';
+        li.style.alignItems = 'center';
+        li.style.padding = '8px'; li.style.borderBottom = '1px solid #eee'; li.style.cursor = 'pointer';
+        const left = document.createElement('div'); left.style.display = 'flex'; left.style.alignItems = 'center';
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = (d.profile && d.profile.name) ? `${d.profile.name}` : (d.deviceId || 'Unnamed');
+        left.appendChild(nameSpan);
+        li.appendChild(left);
+        li.dataset.dogId = d.dogId;
+
+        // center on click
+        li.onclick = () => {
+          try {
+            const m = markers.find(mk => mk.__dogId && String(mk.__dogId) === String(d.dogId));
+            if (m && map) { map.setCenter(m.getPosition()); map.setZoom(15); google.maps.event.trigger(m, 'click'); }
+          } catch (e) { /* ignore if map not present */ }
+        };
+
+        const actions = document.createElement('div');
+
+  // view button
+  const viewBtn = document.createElement('button');
+  viewBtn.textContent = 'View';
+  viewBtn.style.marginLeft = '8px';
+  viewBtn.onclick = async (ev) => {
+          ev.stopPropagation();
+          try {
+            const res = await fetch(`/dog/${d.dogId}`);
+            const j = await res.json();
+            console.debug('viewBtn fetched /dog:', j);
+            const info = document.getElementById('dogInfoContainer');
+            if (!info) { console.warn('dogInfoContainer not found'); return; }
+            if (j && j.success && j.profile) {
+              info.innerHTML = `
+                  <div style="display:flex; gap:12px; align-items:center;">
+                    <div style="width:86px; height:86px; border-radius:50%; background:linear-gradient(135deg,#ffb347 0%,#ff9800 100%); padding:4px; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 14px rgba(0,0,0,0.08);">
+                      <div style="width:100%; height:100%; border-radius:50%; overflow:hidden; background:#fff; display:flex; align-items:center; justify-content:center;">
+                        <img src="${j.profile.photoUrl || 'https://cdn-icons-png.flaticon.com/512/616/616408.png'}" style="width:100%; height:100%; object-fit:cover; display:block;" />
+                      </div>
+                    </div>
+                    <div style="flex:1">
+                      <div style="font-weight:700; font-size:1.1rem;">${j.profile.name || 'Unnamed'}</div>
+                      <div>Device ID: <code style="background:#fff8e1; padding:2px 6px; border-radius:4px;">${j.profile.deviceId || '—'}</code></div>
+                      <div>Age: ${j.profile.age || 'N/A'}</div>
+                      <div>Breed: ${j.profile.breed || 'N/A'}</div>
+                      <div>Traits: ${(j.profile.traits || []).join(', ') || 'N/A'}</div>
+                    </div>
+                    <div style="flex:0 0 120px; text-align:right">
+                      <button onclick="(function(){ var el=document.getElementById('dogInfoContainer'); if(el) window.hideElement(el); })()">Close</button>
+                    </div>
+                  </div>
+                `;
+              try { if (window && window.showElement) window.showElement(info); else { info.classList.remove('hidden-by-transition'); info.classList.add('visible-by-transition'); info.style.display = ''; } } catch (e) { info.style.display = ''; }
+            } else {
+              info.innerHTML = '<div style="padding:12px">Unable to load dog profile.</div>';
+              try { if (window && window.showElement) window.showElement(info); else info.style.display = ''; } catch(e) { info.style.display = ''; }
+            }
+          } catch (err) {
+            console.warn('view failed', err);
+            const info = document.getElementById('dogInfoContainer');
+            if (info) {
+              info.innerHTML = '<div style="padding:12px">Network error loading profile.</div>';
+              try { if (window && window.showElement) window.showElement(info); else info.style.display = ''; } catch(e) { info.style.display = ''; }
+            }
+          }
+        };
+  actions.appendChild(viewBtn);
+
+  // Only show Edit/Remove if the current user is authenticated and owns this pet
+  const isOwner = window.currentUserId && (d.profile && String(d.profile.ownerId) === String(window.currentUserId));
+  if (isOwner) {
+  // edit button
+  const editBtn = document.createElement('button');
+  editBtn.textContent = 'Edit';
+  editBtn.style.marginLeft = '8px';
+  editBtn.onclick = async (ev) => {
+          ev.stopPropagation();
+          try {
+            const res = await fetch(`/dog/${d.dogId}`);
+            const pj = await res.json();
+            if (pj.success && pj.profile) {
+              const f = document.getElementById('registerDogForm'); if (!f) return;
+              f.deviceId.value = pj.profile.deviceId || '';
+              f.name.value = pj.profile.name || '';
+              f.age.value = pj.profile.age || '';
+              f.breed.value = pj.profile.breed || '';
+              f.traits.value = (pj.profile.traits || []).join(', ');
+              // set edit mode
+              f.dataset.editDogId = d.dogId;
+              // show form using global transition helpers (prevents it staying hidden-by-transition)
+              const lcEl = document.getElementById('loginContainer'); if (lcEl) window.hideElement(lcEl);
+              const scEl = document.getElementById('signupContainer'); if (scEl) window.hideElement(scEl);
+              const rdEl = document.getElementById('registerDogContainer');
+              if (rdEl) {
+                try { window.showElement(rdEl); } catch (e) { /* ignore */ }
+                // fallback: ensure classes/display are set so it is visible
+                try { rdEl.classList.remove('hidden-by-transition'); rdEl.classList.add('visible-by-transition'); rdEl.style.display = ''; rdEl.style.pointerEvents = ''; } catch (e) {}
+                // scroll into view for clarity
+                try { rdEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e){}
+              }
+            }
+          } catch (err) { console.warn('prefill failed', err); }
+        };
+  actions.appendChild(editBtn);
+
+  // remove button
+  const removeBtn = document.createElement('button');
+  removeBtn.textContent = 'Remove';
+  removeBtn.style.marginLeft = '8px';
+  removeBtn.style.background = '#d32f2f'; removeBtn.style.color = '#fff';
+  removeBtn.onclick = async (ev) => {
+          ev.stopPropagation();
+          if (!window.currentUserId) { alert('You must be logged in to remove a dog.'); return; }
+          if (!confirm('Remove this dog and all its stored locations? This cannot be undone.')) return;
+          try {
+            const headers = { ...(window.authToken ? { 'Authorization': 'Bearer ' + window.authToken } : {}) };
+            const res = await fetch(`/dog/${d.dogId}`, { method: 'DELETE', headers });
+            if (!res.ok) {
+              const txt = await res.text().catch(()=>null);
+              console.error('DELETE /dog failed', res.status, txt);
+              alert('Remove failed: ' + (txt || res.status));
+              return;
+            }
+            // parse JSON if any
+            let j = null;
+            try { j = await res.json(); } catch (e) { /* ignore non-JSON 2xx */ }
+            if (j && j.success === false) { alert('Remove failed: ' + (j.error || 'unknown')); return; }
+
+            // refresh list
+            await loadDogs();
+
+            // ensure there's a place to show undo (avoid undefined undoArea errors)
+            let undoArea = document.getElementById('undoArea');
+            if (!undoArea) {
+              undoArea = document.createElement('div');
+              undoArea.id = 'undoArea';
+              // insert above pet list if possible
+              const petList = document.getElementById('petListContainer');
+              if (petList && petList.parentNode) petList.parentNode.insertBefore(undoArea, petList);
+              else document.body.insertBefore(undoArea, document.body.firstChild);
+            }
+            undoArea.innerHTML = '';
+            const undoBox = document.createElement('div');
+            undoBox.style.padding = '10px'; undoBox.style.border = '1px solid #ffd0b3'; undoBox.style.background = '#fff3e6'; undoBox.style.borderRadius = '8px'; undoBox.style.display = 'flex'; undoBox.style.justifyContent = 'space-between'; undoBox.style.alignItems = 'center';
+            undoBox.innerHTML = `<div>Dog "${(d.profile && d.profile.name) || d.deviceId}" removed.</div>`;
+            const undoBtn = document.createElement('button'); undoBtn.textContent = 'Undo'; undoBtn.style.marginLeft = '12px';
+            undoBtn.onclick = async () => {
+              const pwd = prompt('Enter a password to recreate this dog (choose a new password):');
+              if (!pwd) { alert('Undo cancelled — password required'); return; }
+              try {
+                const payload = { ownerId: window.currentUserId, deviceId: d.deviceId, password: pwd, name: (d.profile && d.profile.name) || '', age: (d.profile && d.profile.age) || undefined, breed: (d.profile && d.profile.breed) || '', traits: (d.profile && d.profile.traits) || [], photoUrl: (d.profile && d.profile.photoUrl) || undefined };
+                const r = await fetch('/registerDog', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(window.authToken ? { 'Authorization': 'Bearer ' + window.authToken } : {}) }, body: JSON.stringify(payload) });
+                const jr = await r.json();
+                if (jr.success) { undoArea.innerHTML = '<div style="color:#388e3c; padding:6px">Dog restored.</div>'; loadDogs(); }
+                else { alert('Restore failed: ' + (jr.error || 'unknown')); }
+              } catch (err) { console.error('Network error during restore', err); alert('Network error during restore'); }
+            };
+            undoBox.appendChild(undoBtn);
+            undoArea.appendChild(undoBox);
+            setTimeout(() => { if (undoArea && undoArea.parentNode) undoArea.innerHTML = ''; }, 12000);
+          } catch (err) {
+            console.error('Remove failed (client-side)', err);
+            // refresh UI to reflect server state and avoid blocking alerts
+            try { await loadDogs(); } catch(e) { /* ignore */ }
+          }
+        };
+  actions.appendChild(removeBtn);
+  } // end isOwner
+
+        li.appendChild(actions);
+      ul.appendChild(li);
+      });
+      container.appendChild(ul);
+    }
+    
+// Render a read-only info panel for a dog
+function renderDogInfo(profile) {
+  const c = document.getElementById('dogInfoContainer');
+  if (!c) return;
+  c.style.display = '';
+  const traits = (profile.traits || []).length ? (profile.traits || []).join(', ') : 'N/A';
+  c.innerHTML = `
+    <div style="display:flex; gap:12px; align-items:center;">
+      <!-- circular orange-framed photo -->
+      <div style="flex:0 0 96px; display:flex; align-items:center; justify-content:center;">
+        <div style="width:86px; height:86px; border-radius:50%; background:linear-gradient(135deg,#ffb347 0%,#ff9800 100%); padding:4px; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 14px rgba(0,0,0,0.08);">
+          <div style="width:100%; height:100%; border-radius:50%; overflow:hidden; background:#fff; display:flex; align-items:center; justify-content:center;">
+            <img src="${profile.photoUrl || 'https://cdn-icons-png.flaticon.com/512/616/616408.png'}" style="width:100%; height:100%; object-fit:cover; display:block;" />
+          </div>
+        </div>
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:700; font-size:1.1rem;">${profile.name || 'Unnamed'}</div>
+        <div>Device ID: <code style="background:#fff8e1; padding:2px 6px; border-radius:4px;">${profile.deviceId || '—'}</code></div>
+        <div>Age: ${profile.age || 'N/A'}</div>
+        <div>Breed: ${profile.breed || 'N/A'}</div>
+        <div>Traits: ${traits}</div>
+      </div>
+      <div style="flex:0 0 120px; text-align:right">
+        <button onclick="(function(){ var el=document.getElementById('dogInfoContainer'); if(el && window.hideElement) window.hideElement(el); else if(el) el.style.display='none'; })()">Close</button>
+      </div>
+    </div>
+  `;
+  // ensure visible via helper
+  try { if (window && window.showElement) window.showElement(c); else { c.classList.remove('hidden-by-transition'); c.classList.add('visible-by-transition'); c.style.display = ''; } } catch(e){ c.style.display=''; }
+}
+    </script>
+</body>
+</html>
