@@ -148,6 +148,8 @@
   <!-- Nearby feature: Find public dogs near your phone -->
   <div style="max-width:900px; margin:12px auto; text-align:center;">
     <button id="findNearbyBtn" style="padding:8px 12px; border-radius:8px; background:#4caf50; color:#fff; border:none; cursor:pointer;">Find nearby dogs</button>
++    <!-- Hidden by default. Revealed by updateAuthUI() after map/auth ready. -->
++    <button id="findNearbyBtn" style="display:none; padding:8px 12px; border-radius:8px; background:#4caf50; color:#fff; border:none; cursor:pointer; touch-action:manipulation;">Find nearby dogs</button>
     <div id="nearbyResult" style="margin-top:12px;"></div>
   </div>
   <script>
@@ -183,7 +185,7 @@
       if (!el) return;
       el.classList.add('page-transition');
       el.classList.remove('hidden-by-transition');
-      el.classList.add('visible-by-transition');
+      el.classList.add('visible-by-transition'); 
       el.style.display = '';
       setTimeout(() => { el.style.pointerEvents = ''; }, 300);
     };
@@ -267,6 +269,18 @@
         // ensure the register form cannot be displayed for unauthenticated users
         try { regForm.style.display = 'none'; } catch(e){}
       }
+
+      // Find Nearby button: only show when the map is visible (app-ready) AND user is authenticated.
+      // If you prefer to allow unauthenticated nearby searches once the map is displayed, remove the auth check.
+      const findNearbyBtn = document.getElementById('findNearbyBtn');
+      if (findNearbyBtn) {
+        const mapReady = document.body.classList.contains('app-ready');
+        if (mapReady && window.currentUserId && window.authToken) {
+          findNearbyBtn.style.display = '';
+        } else {
+          findNearbyBtn.style.display = 'none';
+        }
+      }
     } catch (e) { /* ignore UI update errors */ }
   }
 
@@ -318,6 +332,8 @@
   try { document.body.classList.add('app-ready'); } catch(e){}
   const mc = document.getElementById('mapContainer'); if (mc) showElement(mc);
   initMap();
+    // Update UI after the map is shown so buttons (Find Nearby, Add Dog, etc.) can be revealed appropriately.
+ try { updateAuthUI(); } catch(e) {}
     }
 
     // Login
