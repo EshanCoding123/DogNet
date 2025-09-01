@@ -18,7 +18,8 @@ Here are the key features of the software:
 - Public location of your dog is not shown when you are in your house for privacy
 - MongoDB Atlas stores login and account info along with each dog and each location/public location
 
-For the GPS, it is very primitive but uses a SIM7000 chip attached to an arduino board to post location information with a specific pre-assigned DEVICE_ID for the registered dog. IT IS VERY CRITICAL NOT TO SHARE YOUR DEVICE_ID WITH ANYONE. 
+To register a GPS, you must use a phone as a GPS for now. The main idea is that some type of GPS device posts location to the server. 
+
 
 
 
