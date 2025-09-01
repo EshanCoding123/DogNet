@@ -74,6 +74,8 @@
       input{ padding:14px; }
       #findNearbyBtn{ padding:12px 14px; border-radius:10px; min-height:48px; }
     }
+  /* Splash buttons should not be forced full-width by the global rule */
+  #splashAuth .splash-btn { width: auto !important; display: inline-block !important; min-width: 140px; margin-top: 0 !important; }
   </style>
 </head>
 <body>
@@ -83,8 +85,13 @@
   <!-- Splash: Get started for unauthenticated users -->
   <div id="splashAuth" style="max-width:900px; margin:18px auto; display:flex; justify-content:center; gap:12px;">
     <div style="background:#fffbe6; padding:22px; border-radius:12px; border:2px solid #ffb347; display:flex; align-items:center; gap:12px;">
-      <div style="font-size:1.05rem; font-weight:700; color:#4e260e;">Welcome to DogNet</div>
-      <button id="getStartedBtn" style="background:#ff9800; color:#fff; border:none; padding:10px 14px; border-radius:8px; cursor:pointer;">Get started</button>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div style="font-size:1.05rem; font-weight:700; color:#4e260e;">Welcome to DogNet</div>
+        <div style="display:flex; gap:8px;">
+          <button id="getStartedBtn" class="splash-btn" style="background:#ff9800; color:#fff; border:none; padding:10px 14px; border-radius:8px; cursor:pointer;">Get started</button>
+          <a id="registerPhoneBtn" class="splash-btn" href="/gps-registration.html" role="button" style="background:#1976d2; color:#fff; padding:10px 14px; border-radius:8px; text-decoration:none; text-align:center; display:inline-block;">Register Phone as GPS</a>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -147,9 +154,7 @@
   </div>
   <!-- Nearby feature: Find public dogs near your phone -->
   <div style="max-width:900px; margin:12px auto; text-align:center;">
-    <button id="findNearbyBtn" style="padding:8px 12px; border-radius:8px; background:#4caf50; color:#fff; border:none; cursor:pointer;">Find nearby dogs</button>
-+    <!-- Hidden by default. Revealed by updateAuthUI() after map/auth ready. -->
-+    <button id="findNearbyBtn" style="display:none; padding:8px 12px; border-radius:8px; background:#4caf50; color:#fff; border:none; cursor:pointer; touch-action:manipulation;">Find nearby dogs</button>
+  <button id="findNearbyBtn" style="display:none; padding:8px 12px; border-radius:8px; background:#4caf50; color:#fff; border:none; cursor:pointer;">Find nearby dogs</button>
     <div id="nearbyResult" style="margin-top:12px;"></div>
   </div>
   <script>
