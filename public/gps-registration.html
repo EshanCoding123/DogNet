@@ -1,0 +1,281 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DogNet - Register Phone as GPS</title>
+  <link rel="manifest" href="/manifest.json">
+  <style>
+    body{ font-family: Roboto, Arial, sans-serif; background: linear-gradient(135deg,#f7e9d7 0%,#ffe6e6 100%); margin:0; padding:18px; }
+    .card{ max-width:720px; margin:24px auto; background:#fffbe6; padding:18px; border-radius:12px; border:2px solid #ffb347; }
+    button{ padding:10px 14px; border-radius:8px; border:none; cursor:pointer; }
+    .muted{ color:#666; }
+    .success{ color:#388e3c; }
+    .error{ color:#d32f2f; }
+    .row{ display:flex; gap:8px; align-items:center; }
+    input[type=text]{ padding:10px; border-radius:8px; border:1px solid #ffd8a8; width:100%; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2 style="font-family:'Baloo 2', cursive; color:#ff9800;">Register this Phone as GPS</h2>
+    <p class="muted">This will create a Device ID you can use when registering your dog. The phone will post its location to the server only after you register a dog using that Device ID.</p>
+
+    <div style="margin-top:12px;">
+      <label>Generated Device ID</label>
+      <div class="row" style="margin-top:6px;">
+        <input id="deviceIdInput" type="text" readonly />
+        <button id="copyBtn" style="background:#1976d2; color:#fff;">Copy</button>
+        <button id="qrBtn" style="background:#6a1b9a; color:#fff;">Show QR</button>
+      </div>
+      <div id="qrWrap" style="margin-top:10px; display:none; align-items:center; gap:8px;">
+        <img id="qrImg" alt="Device ID QR" style="width:160px; height:160px; border-radius:8px; border:1px solid #ffd8a8; background:#fff;" />
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <button id="downloadQrBtn" style="background:#1976d2; color:#fff;">Download QR</button>
+          <div class="muted" style="max-width:300px; font-size:13px;">Scan this QR from another device to copy the Device ID, or download it for later.</div>
+        </div>
+      </div>
+      <div id="statusText" style="margin-top:8px;" class="muted">Press "Generate" to create a Device ID.</div>
+    </div>
+
+    <div style="margin-top:14px; display:flex; gap:8px;">
+      <button id="genBtn" style="background:#ff9800; color:#fff;">Generate</button>
+      <button id="checkBtn" style="background:#4caf50; color:#fff;">Check registration</button>
+      <button id="startBtn" style="background:#1976d2; color:#fff; display:none;">Start sharing location</button>
+      <button id="stopBtn" style="background:#d32f2f; color:#fff; display:none;">Stop</button>
+    </div>
+
+    <div style="margin-top:12px;">
+      <div id="regDetails" class="muted">Once your dog is registered with the device ID, this phone will begin posting location updates every 15 seconds while sharing is enabled.</div>
+    </div>
+
+    <div style="margin-top:18px;">
+      <a href="/" style="text-decoration:none;"><button style="background:#ffb347;">Back to app</button></a>
+    </div>
+  </div>
+
+<script>
+//helper to generate a reasonably-unique device id (UUIDv4-like)
+function generateDeviceId() {
+  //quick RFC4122 v4 compliant generator
+  return 'gps-' + ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+}
+
+let deviceId = '';
+let postingInterval = null;
+let postingHandle = null;
+const statusText = document.getElementById('statusText');
+const deviceIdInput = document.getElementById('deviceIdInput');
+
+function setStatus(txt, cls) { statusText.textContent = txt; statusText.className = cls || 'muted'; }
+
+document.getElementById('genBtn').onclick = () => {
+  deviceId = generateDeviceId();
+  deviceIdInput.value = deviceId;
+  setStatus('Device ID generated. Copy it and use it when registering your dog.');
+  //Proactively prompt for geolocation permission so the browser asks now
+  //(many users expect this during registration)
+  try { attemptPermissionPrompt(); } catch (e) { /* ignore */ }
+  try { localStorage.setItem('gpsDeviceId', deviceId); } catch(e){}
+  updateQRCode();
+};
+
+document.getElementById('copyBtn').onclick = async () => {
+  if (!deviceIdInput.value) return;
+  try { await navigator.clipboard.writeText(deviceIdInput.value); setStatus('Copied to clipboard', 'success'); } catch (e) { setStatus('Copy failed: ' + (e.message||e), 'error'); }
+};
+
+//QR code helpers: we'll use Chart API for a simple client-side QR generation
+function updateQRCode() {
+  const img = document.getElementById('qrImg');
+  const data = deviceIdInput.value || '';
+  if (!data) {
+    //no device id yet: clear image and show placeholder alt
+    img.src = '';
+    img.alt = 'No Device ID yet';
+    return;
+  }
+  const encoded = encodeURIComponent(data);
+  //size 300x300, error correction L
+  //Use QuickChart (reliable replacement for the deprecated Google Chart API)
+  const url = `https://quickchart.io/qr?text=${encoded}&size=300&ecLevel=L`;
+  //Try external chart API first. If it fails (CSP/offline/block), fall back to local generator.
+  img.onload = () => { img.alt = 'Device ID QR'; };
+  img.onerror = () => { console.warn('External QR failed, generating local QR fallback'); generateLocalQRCode(data); };
+  img.src = url;
+}
+
+//Local QR fallback using qrcodejs (loaded dynamically). Generates a dataURL and sets it on #qrImg.
+function generateLocalQRCode(text) {
+  const img = document.getElementById('qrImg');
+  //If the library isn't loaded, load it from CDN then render
+  const ensureLib = () => new Promise((resolve, reject) => {
+    if (window.QRCode) return resolve();
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('Failed to load QR library'));
+    document.head.appendChild(s);
+  });
+
+  ensureLib().then(() => {
+    try {
+      // QRCode requires a container element — create one off-DOM
+      const container = document.createElement('div');
+      const q = new QRCode(container, { text: text, width: 300, height: 300, correctLevel: QRCode.CorrectLevel.L });
+      //qrcodejs puts an <img> or <canvas> inside the container
+      setTimeout(() => {
+        const insideImg = container.querySelector('img');
+        if (insideImg && insideImg.src) { img.src = insideImg.src; }
+        else {
+          const canvas = container.querySelector('canvas');
+          if (canvas) img.src = canvas.toDataURL('image/png');
+        }
+      }, 0);
+    } catch (err) {
+      console.warn('Local QR generation failed', err);
+    }
+  }).catch((e) => { console.warn('Could not load QR library:', e); });
+}
+
+function downloadQRCode() {
+  const img = document.getElementById('qrImg');
+  if (!img.src) return;
+  // create a temporary link to download the QR image
+  const a = document.createElement('a');
+  a.href = img.src;
+  a.download = (deviceIdInput.value || 'device-id') + '.png';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+document.getElementById('qrBtn').onclick = () => {
+  const wrap = document.getElementById('qrWrap');
+  if (wrap.style.display === 'none' || !wrap.style.display) {
+    updateQRCode();
+    wrap.style.display = 'flex';
+    document.getElementById('qrBtn').textContent = 'Hide QR';
+  } else {
+    wrap.style.display = 'none';
+    document.getElementById('qrBtn').textContent = 'Show QR';
+  }
+};
+
+document.getElementById('downloadQrBtn').onclick = downloadQRCode;
+
+async function checkRegistered() {
+  if (!deviceIdInput.value) { setStatus('Generate a device ID first', 'error'); return false; }
+  try {
+    const res = await fetch('/device/' + encodeURIComponent(deviceIdInput.value) + '/status');
+    const j = await res.json();
+    if (j && j.registered) { setStatus('Device is registered to a dog (dogId=' + j.dogId + '). You may start sharing location.'); return true; }
+    else { setStatus('Device not registered yet. Register your dog using this Device ID.'); return false; }
+  } catch (err) { setStatus('Status check failed', 'error'); return false; }
+}
+
+// start posting geolocation to /location
+async function startPosting() {
+  if (!deviceIdInput.value) { setStatus('Generate a device ID first', 'error'); return; }
+  // request permission and get a single position first
+  if (!navigator.geolocation) { setStatus('Geolocation not available in this browser', 'error'); return; }
+  try {
+    const p = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 }));
+    setStatus('Got location. Starting periodic posting every 15s.', 'success');
+    // show controls
+    document.getElementById('startBtn').style.display = 'none';
+    document.getElementById('stopBtn').style.display = '';
+
+    // post immediately, then every N seconds
+    const postOnce = async (pos) => {
+      try {
+        const body = { deviceId: deviceIdInput.value, lat: pos.coords.latitude, lon: pos.coords.longitude };
+        await fetch('/location', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        console.debug('posted location', body);
+      } catch (err) { console.warn('post failed', err); }
+    };
+
+    await postOnce(p);
+    postingInterval = setInterval(async () => {
+      navigator.geolocation.getCurrentPosition(async (pos) => { await postOnce(pos); }, (err) => { console.warn('geolocation error', err); setStatus('Location error: ' + (err.message||err), 'error'); }, { enableHighAccuracy: true, timeout: 10000 });
+    }, 15 * 1000);
+  } catch (err) { setStatus('Geolocation permission denied or unavailable', 'error'); }
+}
+
+// Try to prompt the user for geolocation permission (best-effort).
+// If Permissions API is available we check state first; otherwise call
+// getCurrentPosition to trigger the browser prompt.
+function attemptPermissionPrompt() {
+  if (!navigator.geolocation) {
+    setStatus('Geolocation not available in this browser', 'error');
+    return;
+  }
+  // If permissions API exists, query first to provide clearer UX
+  if (navigator.permissions && navigator.permissions.query) {
+    navigator.permissions.query({ name: 'geolocation' }).then((perm) => {
+      if (perm.state === 'granted') {
+        setStatus('Location permission already granted', 'success');
+      } else if (perm.state === 'prompt') {
+        // call getCurrentPosition to trigger the prompt
+        navigator.geolocation.getCurrentPosition((pos) => {
+          setStatus('Location permission granted', 'success');
+        }, (err) => {
+          setStatus('Permission denied or unavailable', 'error');
+        }, { enableHighAccuracy: true, timeout: 10000 });
+      } else {
+        setStatus('Location permission denied — enable it in browser settings', 'error');
+      }
+    }).catch(() => {
+      // Fallback: directly call getCurrentPosition
+      navigator.geolocation.getCurrentPosition(() => { setStatus('Location permission granted', 'success'); }, () => { setStatus('Permission denied or unavailable', 'error'); }, { enableHighAccuracy: true, timeout: 10000 });
+    });
+  } else {
+    // No permissions API — directly try to get position to trigger prompt
+    navigator.geolocation.getCurrentPosition(() => { setStatus('Location permission granted', 'success'); }, () => { setStatus('Permission denied or unavailable', 'error'); }, { enableHighAccuracy: true, timeout: 10000 });
+  }
+}
+
+function stopPosting() {
+  if (postingInterval) { clearInterval(postingInterval); postingInterval = null; }
+  document.getElementById('stopBtn').style.display = 'none';
+  document.getElementById('startBtn').style.display = '';
+  setStatus('Stopped posting location', 'muted');
+}
+
+//wire buttons
+document.getElementById('checkBtn').onclick = async () => {
+  const ok = await checkRegistered();
+  if (ok) {
+    document.getElementById('startBtn').style.display = '';
+  } else {
+    document.getElementById('startBtn').style.display = 'none';
+  }
+};
+
+document.getElementById('startBtn').onclick = async () => {
+  const ok = await checkRegistered();
+  if (!ok) return;
+  startPosting();
+};
+
+document.getElementById('stopBtn').onclick = stopPosting;
+
+// On load: try to restore a previously created id from localStorage
+(function(){
+  try {
+    const saved = localStorage.getItem('gpsDeviceId');
+    if (saved) { deviceId = saved; deviceIdInput.value = deviceId; setStatus('Restored previous Device ID.'); }
+  } catch(e){}
+})();
+
+//ensure QR updates when a device id is restored on load
+if (deviceIdInput.value) { updateQRCode(); }
+
+// save generated device id whenever changed
+deviceIdInput.addEventListener('input', () => { try { localStorage.setItem('gpsDeviceId', deviceIdInput.value); } catch(e){} });
+// also update QR when input changes
+deviceIdInput.addEventListener('input', () => { try { updateQRCode(); } catch(e){} });
+
+</script>
+</body>
+</html>
