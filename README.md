@@ -21,6 +21,7 @@ Here are the key features of the software:
 
 To register a GPS, you must use a phone as a GPS for now. The main idea is that some type of GPS device posts location to the server. 
 
+<img width="500" height="500" alt="DOG NET" src="https://github.com/user-attachments/assets/2b2d6d35-a462-4720-aae7-49b973e303af" />
 
 
 
