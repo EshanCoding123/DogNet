@@ -12,6 +12,7 @@ Dogs cannot be registered without a GPS. You can still see other dogs publicly, 
 
 Here are the key features of the software:
 - GPS device is assigned a unique ID that must be entered on registration for dog
+- Your phone device is mainly used as the GPS. In the future, custom GPS's will be distributed
 - Dogs can be registered, removed, edited, and deleted
 - Dogs can be displayed publicly to other owners (this shows whether owners should approach the dog or stay away from them)
 - Dogs can also be displayed solely to the owner by turning off a checkbox in the dog registration
@@ -19,6 +20,7 @@ Here are the key features of the software:
 - MongoDB Atlas stores login and account info along with each dog and each location/public location
 
 To register a GPS, you must use a phone as a GPS for now. The main idea is that some type of GPS device posts location to the server. 
+
 
 
 
