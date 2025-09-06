@@ -2,10 +2,10 @@ let map;
 let markers = [];
 const petListContainerId = 'petListContainer';
 
-// session flag: set to true when the current user's device is detected to be at their home
+//session flag: set to true when the current user's device is detected to be at their home
 window.userIsAtHome = false;
 
-// Haversine distance (meters)
+//distance calculation (meters)
 function haversineMeters(lat1, lon1, lat2, lon2) {
   const toRad = v => v * Math.PI / 180;
   const R = 6371000;
@@ -16,17 +16,17 @@ function haversineMeters(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-// Check whether the current user is physically at their home location.
-// Sets window.userIsAtHome = true if within thresholdMeters.
+//check whether the current user is physically at their home location.
+//sets window.userIsAtHome =true if within thresholdMeters.
 async function checkIfAtHome(thresholdMeters = 50) {
   try {
     if (!window.currentUserId || !navigator.geolocation) { window.userIsAtHome = false; return; }
-    // get home location from server
+    //fetch home location
     const uRes = await fetch(`/user/${window.currentUserId}`);
     const uj = await uRes.json();
     if (!uj || !uj.success || !uj.user || !uj.user.homeLocation) { window.userIsAtHome = false; return; }
     const home = uj.user.homeLocation;
-    // get current device position (best-effort, may prompt the user once)
+    //get current device position (best-effort,may prompt the user once)
     navigator.geolocation.getCurrentPosition((pos) => {
       try {
         const lat = Number(pos.coords.latitude);
@@ -36,7 +36,7 @@ async function checkIfAtHome(thresholdMeters = 50) {
         console.debug('checkIfAtHome:', { lat, lon, home, dist, userIsAtHome: window.userIsAtHome });
       } catch (err) { console.warn('checkIfAtHome compute failed', err); window.userIsAtHome = false; }
     }, (err) => {
-      // cannot get position -> default to not at home
+      //cannot get position ->default to not at home
       console.warn('checkIfAtHome geolocation failed', err);
       window.userIsAtHome = false;
     }, { maximumAge: 30 * 1000, timeout: 5000 });
@@ -54,20 +54,20 @@ async function loadDogs() {
   markers.forEach((m) => m.setMap(null));
   markers = [];
 
-  // Debug output: show payload and map state
+  //debug output: show payload and map state
   console.debug('app.js: fetched /locations ->', dogs);
   if (!map) console.warn('app.js: map is undefined when loadDogs ran');
 
-  // Render pet list for the current user (or show all if not logged in)
+  //render pet list for the current user (or show all if not logged in)
   try { renderPetList(dogs); } catch (e) { console.warn('renderPetList failed', e); }
 
-  // For each location, ensure we have lat/lon and dogId
+  //for each location,  we have lat/lon and dogId
   for (const dog of dogs) {
     const lat = dog.lat === undefined || dog.lat === null ? null : Number(dog.lat);
     const lon = dog.lon === undefined || dog.lon === null ? null : Number(dog.lon);
     if (lat === null || lon === null) continue;
 
-        // If profile is missing or incomplete, fetch by dogId
+        //if profile is missing or incomplete, fetch by dogId
         let profile = dog.profile;
         if ((!profile || !profile.name) && dog.dogId) {
           try {
@@ -84,13 +84,13 @@ async function loadDogs() {
           continue;
         }
 
-        // If this dog belongs to the current user and the user is at home,
-        // hide the marker for privacy (do not show latest device position on the map).
+        //if this dog belongs to the current user and the user is at home,
+        //hide the marker for privacy (do not show latest device position on the map).
         const isOwnerDog = window.currentUserId && dog.profile && String(dog.profile.ownerId) === String(window.currentUserId);
         if (isOwnerDog && window.userIsAtHome) {
           console.debug('Hiding owner dog marker because user is at home', { dogId: dog.dogId });
-          // still add an entry in markers array as null placeholder so UI code that expects markers length doesn't break
-          // but do not place it on the map.
+          //still add an entry in markers array as null placeholder so UI code that expects markers length doesn't break
+          //but do not place it on the map.
           markers.push(null);
           continue;
         }
@@ -98,7 +98,7 @@ async function loadDogs() {
   const marker = new google.maps.Marker({
           position: { lat, lng: lon },
           map,
-          // title fallback: profile.name -> payload name -> deviceId -> generic
+          //title fallback: profile.name -> payload name -> deviceId -> generic
           title: (profile && profile.name) || dog.name || dog.deviceId || 'Dog',
           icon: {
             url: (profile && profile.photoUrl) || dog.photoUrl || "https://cdn-icons-png.flaticon.com/512/616/616408.png",
@@ -124,29 +124,29 @@ async function loadDogs() {
   }
 }
 
-// Create a new dog (used by SPA) - returns JSON
+//create a new dog (used by SPA) - returns JSON
 async function createDog(payload) {
-  // Prevent creating a dog when there's no logged-in user on the client
+  //prevent creating a dog when there's no logged-in user on the client
   if (!window.currentUserId || !window.authToken) {
     console.warn('createDog blocked: no currentUserId set');
     return { success: false, error: 'not-authenticated' };
   }
 
-  // Ensure ownerId is present and set from the current session
+  //ensure ownerId is present and set from the current session
   const safePayload = Object.assign({}, payload, { ownerId: String(window.currentUserId) });
   const headers = { 'Content-Type': 'application/json', ...(window.authToken ? { 'Authorization': 'Bearer ' + window.authToken } : {}) };
   const res = await fetch('/registerDog', { method: 'POST', headers, body: JSON.stringify(safePayload) });
   return res.json();
 }
 
-// Update existing dog
+//update existing dog
 async function updateDog(dogId, payload) {
   const headers = { 'Content-Type': 'application/json', ...(window.authToken ? { 'Authorization': 'Bearer ' + window.authToken } : {}) };
   const res = await fetch(`/dog/${dogId}`, { method: 'PUT', headers, body: JSON.stringify(payload) });
   return res.json();
 }
 
-// Helper to fetch a single dog profile (used for prefill)
+//Helper to fetch a single dog profile (used for prefill)
 async function getDogProfile(dogId) {
   const res = await fetch(`/dog/${dogId}`);
   return res.json();
@@ -163,7 +163,7 @@ function initMap() {
     zoom: 14,
   });
 
-  // If the page has a current user id (set by signup/login flow), try to center on their home
+  //If the page has a current user id (set by signup/login flow), try to center on their home
   (async function tryCenterOnHome() {
     try {
       if (window.currentUserId) {
@@ -186,7 +186,7 @@ function initMap() {
   setInterval(loadDogs, 5000);
 }
 
-// initMap will be invoked once Google Maps library is loaded (via callback in the dynamic loader)
+//initMap will be invoked once Google Maps library is loaded (via callback in the dynamic loader)
 
 function renderPetList(dogs) {
   const container = document.getElementById(petListContainerId);
@@ -206,7 +206,7 @@ function renderPetList(dogs) {
     li.style.padding = '8px';
     li.style.borderBottom = '1px solid #eee';
     li.style.cursor = 'pointer';
-  // Prefer profile.name, then payload name, then deviceId, finally 'Unnamed'
+ 
   li.textContent = (d.profile && d.profile.name) ? d.profile.name : (d.name || d.deviceId || 'Unnamed');
     li.dataset.dogId = d.dogId;
   // If this is the current user's dog and the user is at home, mark as hidden
@@ -225,7 +225,7 @@ function renderPetList(dogs) {
       if (m && map) { map.setCenter(m.getPosition()); map.setZoom(15); google.maps.event.trigger(m, 'click'); }
     };
 
-    // view button (read-only)
+    //view button (read-only)
     const viewBtn = document.createElement('button');
     viewBtn.textContent = 'View';
     viewBtn.style.marginLeft = '8px';
@@ -257,7 +257,7 @@ function renderPetList(dogs) {
           f.age.value = pj.profile.age || '';
           f.breed.value = pj.profile.breed || '';
           f.traits.value = (pj.profile.traits || []).join(', ');
-          // prefill sharePublic checkbox so owner can toggle sharing when editing
+          //prefill sharePublic checkbox so owner can toggle sharing when editing
           try { f.sharePublic.checked = !!pj.profile.sharePublic; } catch (e) { /* ignore if form missing */ }
           // set edit mode
           f.dataset.editDogId = d.dogId;
@@ -269,7 +269,7 @@ function renderPetList(dogs) {
       } catch (err) { console.warn('prefill failed', err); }
     };
 
-    // remove button (destructive, only for owner)
+    //remove button (destructive, only for owner)
     const removeBtn = document.createElement('button');
     removeBtn.textContent = 'Remove';
     removeBtn.style.marginLeft = '8px';
@@ -292,11 +292,10 @@ function renderPetList(dogs) {
           if (json && json.success === false) {
             alert('Remove failed: ' + (json.error || 'unknown'));
           } else {
-            // refresh map/list
+            //refresh map/list
             loadDogs();
           }
         } else {
-          // non-2xx response: attempt to show server message
           let text = null;
           try { text = await res.text(); } catch (e) { /* ignore */ }
           alert('Remove failed: ' + (text || res.statusText || res.status));
